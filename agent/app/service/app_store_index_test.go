@@ -4,8 +4,16 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"crypto/ecdsa"
+	"crypto/elliptic"
+	"crypto/rand"
+	"crypto/tls"
+	"crypto/x509"
+	"crypto/x509/pkix"
 	"encoding/json"
+	"encoding/pem"
 	"io"
+	"math/big"
 	"net"
 	"net/http"
 	"net/http/httptest"
@@ -14,6 +22,7 @@ import (
 	"strings"
 	"sync/atomic"
 	"testing"
+	"time"
 
 	"github.com/1Panel-dev/1Panel/agent/app/dto"
 	"github.com/1Panel-dev/1Panel/agent/app/model"
@@ -66,7 +75,7 @@ func TestAppStoreIndexUsesCacheUntilRevisionChanges(t *testing.T) {
 				t.Fatal(err)
 			}
 			var versionCalls, zipCalls atomic.Int32
-			server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			server, rootCAs := newAppStoreTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				switch {
 				case strings.HasSuffix(r.URL.Path, "1panel.json.version.txt"):
 					versionCalls.Add(1)
@@ -83,9 +92,10 @@ func TestAppStoreIndexUsesCacheUntilRevisionChanges(t *testing.T) {
 					w.WriteHeader(http.StatusNotFound)
 				}
 			}))
-			t.Cleanup(server.Close)
-			transport := server.Client().Transport.(*http.Transport).Clone()
-			transport.TLSClientConfig.InsecureSkipVerify = true
+			transport := &http.Transport{
+				Proxy:           nil,
+				TLSClientConfig: &tls.Config{RootCAs: rootCAs},
+			}
 			transport.DialContext = func(ctx context.Context, network, _ string) (net.Conn, error) {
 				return (&net.Dialer{}).DialContext(ctx, network, server.Listener.Addr().String())
 			}
@@ -125,4 +135,49 @@ func TestAppStoreIndexUsesCacheUntilRevisionChanges(t *testing.T) {
 			}
 		})
 	}
+}
+
+func newAppStoreTestServer(t *testing.T, handler http.Handler) (*httptest.Server, *x509.CertPool) {
+	t.Helper()
+
+	privateKey, err := ecdsa.GenerateKey(elliptic.P256(), rand.Reader)
+	if err != nil {
+		t.Fatal(err)
+	}
+	template := &x509.Certificate{
+		SerialNumber:          big.NewInt(1),
+		Subject:               pkix.Name{CommonName: "apps-assets.fit2cloud.com"},
+		NotBefore:             time.Now().Add(-time.Minute),
+		NotAfter:              time.Now().Add(time.Hour),
+		KeyUsage:              x509.KeyUsageDigitalSignature | x509.KeyUsageCertSign,
+		ExtKeyUsage:           []x509.ExtKeyUsage{x509.ExtKeyUsageServerAuth},
+		BasicConstraintsValid: true,
+		IsCA:                  true,
+		DNSNames:              []string{"apps-assets.fit2cloud.com", "apps.1panel.pro"},
+	}
+	certificate, err := x509.CreateCertificate(rand.Reader, template, template, &privateKey.PublicKey, privateKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	certificatePEM := pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: certificate})
+	privateKeyDER, err := x509.MarshalPKCS8PrivateKey(privateKey)
+	if err != nil {
+		t.Fatal(err)
+	}
+	privateKeyPEM := pem.EncodeToMemory(&pem.Block{Type: "PRIVATE KEY", Bytes: privateKeyDER})
+	serverCertificate, err := tls.X509KeyPair(certificatePEM, privateKeyPEM)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	server := httptest.NewUnstartedServer(handler)
+	server.TLS = &tls.Config{Certificates: []tls.Certificate{serverCertificate}}
+	server.StartTLS()
+	t.Cleanup(server.Close)
+
+	rootCAs := x509.NewCertPool()
+	if !rootCAs.AppendCertsFromPEM(certificatePEM) {
+		t.Fatal("failed to trust app store test certificate")
+	}
+	return server, rootCAs
 }
