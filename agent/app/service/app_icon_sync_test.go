@@ -4,6 +4,7 @@ import (
 	"archive/zip"
 	"bytes"
 	"context"
+	"crypto/tls"
 	"encoding/base64"
 	"encoding/json"
 	"io"
@@ -124,7 +125,7 @@ func TestOfficialIconSameRevisionRefreshIsReadOnlyUntilSync(t *testing.T) {
 	if err := zw.Close(); err != nil {
 		t.Fatal(err)
 	}
-	server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+	server, rootCAs := newAppStoreTestServer(t, http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch {
 		case strings.HasSuffix(r.URL.Path, "1panel.json.version.txt"):
 			_, _ = io.WriteString(w, "42")
@@ -140,9 +141,9 @@ func TestOfficialIconSameRevisionRefreshIsReadOnlyUntilSync(t *testing.T) {
 			w.WriteHeader(http.StatusServiceUnavailable)
 		}
 	}))
-	t.Cleanup(server.Close)
 	transport := server.Client().Transport.(*http.Transport).Clone()
-	transport.TLSClientConfig.InsecureSkipVerify = true
+	transport.Proxy = nil
+	transport.TLSClientConfig = &tls.Config{RootCAs: rootCAs}
 	transport.DialContext = func(ctx context.Context, network, _ string) (net.Conn, error) {
 		return (&net.Dialer{}).DialContext(ctx, network, server.Listener.Addr().String())
 	}
