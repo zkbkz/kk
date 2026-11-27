@@ -24,7 +24,7 @@ jobs:
                   go-version-file: agent/go.mod
                   cache-dependency-path: agent/go.sum
             - name: Prepare embedded VM helpers
-              run: ./utils/vm/helper/prepare.sh
+              run: bash ./utils/vm/helper/prepare.sh
               working-directory: agent
             - name: Test agent services, API, and migrations
               run: go test ./app/service/... ./app/api/v2 ./init/migration/...
