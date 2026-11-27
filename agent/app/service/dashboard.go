@@ -636,12 +636,6 @@ func loadQuickJump(base *dto.DashboardBase) {
 	quicks := launcherRepo.ListQuickJump(false)
 	for i := 0; i < len(quicks); i++ {
 		switch quicks[i].Name {
-		case "ModelServices":
-			count, err := agentAccountRepo.Count()
-			if err != nil {
-				global.LOG.Errorf("load model service count: %v", err)
-			}
-			quicks[i].Detail = fmt.Sprintf("%d", count)
 		case "File":
 			count, err := launcherRepo.CountQuickDirectories()
 			if err != nil {

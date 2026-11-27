@@ -1575,7 +1575,7 @@ func handleInstalledWithContext(ctx context.Context, appInstallList []model.AppI
 			continue
 		}
 
-		if sync && !localEngine && !doNotNeedSync(installed) {
+		if sync && !doNotNeedSync(installed) {
 			synAppInstall(containersMap, &installed, false)
 		}
 

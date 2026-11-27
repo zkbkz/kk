@@ -624,9 +624,6 @@ func (w WebsiteService) CreateWebsite(create request.WebsiteCreate) (err error) 
 	if err := createTask.Execute(); err != nil {
 		return err
 	}
-	if err := bindDeploymentWebsiteToAgentByAppInstall(website); err != nil {
-		global.LOG.Errorf("bind deployment website to agent failed: %v", err)
-	}
 	return nil
 }
 
