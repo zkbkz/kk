@@ -76,7 +76,7 @@
         "eslint-plugin-vue": "^10.10.0",
         "lint-staged": "^17.6.0",
         "postcss": "^8.5.14",
-        "postcss-html": "^2.0.0",
+        "postcss-html": "^2.0.1",
         "prettier": "^3.9.6",
         "rollup-plugin-visualizer": "^7.1.1",
         "sass": "^1.105.0",
