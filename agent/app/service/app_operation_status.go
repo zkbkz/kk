@@ -4,7 +4,6 @@ import (
 	"errors"
 
 	"github.com/1Panel-dev/1Panel/agent/app/model"
-	"github.com/1Panel-dev/1Panel/agent/app/task"
 	"github.com/1Panel-dev/1Panel/agent/constant"
 	"gorm.io/gorm"
 )

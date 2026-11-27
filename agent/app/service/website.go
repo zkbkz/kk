@@ -455,10 +455,6 @@ func (w WebsiteService) CreateWebsite(create request.WebsiteCreate) (err error) 
 			if err != nil {
 				return err
 			}
-			app, err := appRepo.GetFirst(repo.WithByID(appDetail.AppId))
-			if err != nil {
-				return err
-			}
 			req.Name = create.AppInstall.Name
 			req.AppDetailId = create.AppInstall.AppDetailId
 			req.Params = create.AppInstall.Params
