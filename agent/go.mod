@@ -11,7 +11,7 @@ require (
 	github.com/compose-spec/compose-go/v2 v2.15.0
 	github.com/creack/pty v1.1.24
 	github.com/distribution/reference v0.6.0
-	github.com/docker/cli v29.9.0+incompatible
+	github.com/docker/cli v29.10.0+incompatible
 	github.com/docker/docker v28.5.2+incompatible
 	github.com/docker/go-connections v0.8.2
 	github.com/fsnotify/fsnotify v1.10.1
